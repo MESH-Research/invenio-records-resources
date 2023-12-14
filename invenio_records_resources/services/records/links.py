@@ -17,10 +17,7 @@ class RecordLink(Link):
     @staticmethod
     def vars(record, vars):
         """Variables for the URI template."""
-        # Some records don't have record.pid.pid_value yet (e.g. drafts)
-        pid_value = getattr(record.pid, "pid_value", None)
-        if pid_value:
-            vars.update({"id": record.pid.pid_value})
+        vars.update({"id": record.pid.pid_value})
 
 
 def pagination_links(tpl):
