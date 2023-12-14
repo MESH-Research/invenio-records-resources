@@ -8,10 +8,6 @@
 Changes
 =======
 
-Version 4.16.0 (2023-10-23)
-
-- uow: add record delete index op
-
 Version 4.15.0 (2023-10-20)
 
 - base: add possibility to override search options class
