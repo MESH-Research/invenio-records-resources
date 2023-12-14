@@ -31,13 +31,8 @@ class SortParam(ParamInterpreter):
 
     def apply(self, identity, search, params):
         """Evaluate the sort parameter on the search."""
-        fields = self._compute_sort_fields(params)
-
-        return search.sort(*fields)
-
-    def _compute_sort_fields(self, params):
-        """Compute sort fields."""
         options = self.config.sort_options
+
         if "sort" not in params:
             params["sort"] = self._default_sort(params, options)
 
@@ -47,4 +42,5 @@ class SortParam(ParamInterpreter):
         sort = options.get(params["sort"])
         if sort is None:
             raise ValidationError(f"Invalid sort option '{params['sort']}'.")
-        return sort["fields"]
+
+        return search.sort(*sort["fields"])
