@@ -398,7 +398,6 @@ class RecordService(Service, RecordIndexerMixin):
         search_opts=None,
         extra_filter=None,
         preference=None,
-        sort=None,
         **kwargs,
     ):
         """Search for records matching the ids."""
@@ -425,10 +424,8 @@ class RecordService(Service, RecordIndexerMixin):
             # method instead for now.
             search = search.source(fields)
 
-        search = search[0:max_records].query(search_query)
-        if sort:
-            search = search.sort(sort)
-        search_result = search.execute()
+        search = search[0:max_records]
+        search_result = search.query(search_query).execute()
 
         return search_result
 
