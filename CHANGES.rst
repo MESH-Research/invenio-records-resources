@@ -10,7 +10,7 @@ Changes
 
 Version 4.10.0 (2023-09-05)
 
-- uow: run bulk indexing on post commit hook
+- uow: run bulk indexing on post commit
 
 Version 4.9.1 (2023-09-05)
 
