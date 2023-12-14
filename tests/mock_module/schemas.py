@@ -63,8 +63,8 @@ class RecordSchema(BaseRecordSchema):
     metadata = fields.Nested(MetadataSchema)
 
 
-class FilesSchema(Schema):
-    """Basic files schema class."""
+class FilesOptionsSchema(Schema):
+    """Basic files options schema class."""
 
     enabled = fields.Bool(missing=True)
     # allow unsetting
@@ -90,7 +90,7 @@ class FilesSchema(Schema):
 class RecordWithFilesSchema(RecordSchema):
     """Schema for records with files."""
 
-    files = fields.Nested(FilesSchema, required=True)
+    files = fields.Nested(FilesOptionsSchema, required=True)
 
     def get_attribute(self, obj, attr, default):
         """Override how attributes are retrieved when dumping.

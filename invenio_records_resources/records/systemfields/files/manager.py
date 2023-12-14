@@ -415,5 +415,5 @@ class FilesManager(MutableMapping):
 
     # TODO: see what fields are meaningful
     def __repr__(self):
-        """Representation string for the files' collection."""
+        """Represenation string for the files collection."""
         return f"<{type(self).__name__} (enabled={self.enabled})"
