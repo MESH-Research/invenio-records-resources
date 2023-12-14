@@ -202,14 +202,6 @@ class RecordDeleteOp(Operation):
             self._indexer.delete(self._record, refresh=self._index_refresh)
 
 
-class RecordIndexDeleteOp(RecordDeleteOp):
-    """Record index delete operation."""
-
-    def on_register(self, uow):
-        """Overwrite method to not commit."""
-        pass
-
-
 class IndexRefreshOp(Operation):
     """Search index refresh operation."""
 
