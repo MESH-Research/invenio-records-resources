@@ -10,7 +10,7 @@
 import calendar
 
 from arrow import Arrow
-from babel_edtf import parse_edtf
+from edtf import parse_edtf
 from edtf.parser.edtf_exceptions import EDTFParseException
 from marshmallow import fields
 from marshmallow_utils.fields import EDTFDateString, ISODateString
