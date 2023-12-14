@@ -10,7 +10,6 @@
 """Records API."""
 
 import mimetypes
-import os
 from contextlib import contextmanager
 
 from invenio_db import db
@@ -178,23 +177,8 @@ class File:
     @property
     def ext(self):
         """File extension."""
-        # The ``ext`` property is used to in search to aggregate file types, and we want e.g. both ``.jpeg`` and
-        # ``.jpg`` to be aggregated under ``.jpg``
-        ext_guessed = mimetypes.guess_extension(self.object_model.mimetype)
-
-        # Check if a valid extension is guessed and it's not the default mimetype
-        if (
-            ext_guessed is not None
-            and self.object_model.mimetype != "application/octet-stream"
-        ):
-            return ext_guessed[1:]
-
-        # Support non-standard file extensions that cannot be guessed
-        _, ext = os.path.splitext(self.key)
-        if ext and len(ext) <= 5:
-            return ext[1:].lower()
-
-        return ext_guessed[1:]
+        ext = mimetypes.guess_extension(self.object_model.mimetype)
+        return ext[1:] if ext else None
 
     def __getattr__(self, name):
         """Override to get attributes from ObjectVersion and FileInstance."""
