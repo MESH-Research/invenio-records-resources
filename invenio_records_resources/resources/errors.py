@@ -35,7 +35,6 @@ from ..services.errors import (
     FacetNotFoundError,
     FailedFileUploadException,
     FileKeyNotFoundError,
-    FilesCountExceededException,
     PermissionDeniedError,
     QuerystringValidationError,
     RevisionIdMismatchError,
@@ -192,12 +191,6 @@ class ErrorHandlersMixin:
             HTTPJSONException(
                 code=400,
                 description="The file upload transfer failed, please try again.",
-            )
-        ),
-        FilesCountExceededException: create_error_handler(
-            HTTPJSONException(
-                code=400,
-                description="Uploading selected files will result in exceeding the max amount per record.",
             )
         ),
     }
