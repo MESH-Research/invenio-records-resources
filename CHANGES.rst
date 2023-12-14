@@ -8,11 +8,6 @@
 Changes
 =======
 
-Version 4.8.0 (2023-08-25)
-
-- services: move reindex latest records to drafts-resources
-- processors: make image formats (checked for metadata) configurable (#484)
-
 Version 4.7.0 (2023-08-16)
 
 - Implement file syncing when publishing a record
