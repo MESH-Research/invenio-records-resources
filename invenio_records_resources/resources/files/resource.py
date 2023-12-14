@@ -201,9 +201,8 @@ class FileResource(ErrorHandlersMixin, Resource):
             zs = ZipStream(compress_type=ZIP_STORED)
             with ExitStack() as stack:
                 for file_obj in files._results:
-                    if file_obj.file is not None:
-                        fp = stack.enter_context(file_obj.open_stream("rb"))
-                        zs.add(fp, file_obj.key)
+                    fp = stack.enter_context(file_obj.open_stream("rb"))
+                    zs.add(fp, file_obj.key)
                 yield from zs.all_files()
                 yield from zs.finalize()
 
