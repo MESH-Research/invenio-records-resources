@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020-2022 CERN.
+# Copyright (C) 2020-2024 CERN.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -10,10 +10,11 @@
 
 from .query import QueryParser
 from .suggest import SuggestQueryParser
-from .transformer import SearchFieldTransformer
+from .transformer import FieldValueMapper, SearchFieldTransformer
 
 __all__ = (
+    "FieldValueMapper",
     "QueryParser",
-    "SuggestQueryParser",
     "SearchFieldTransformer",
+    "SuggestQueryParser",
 )

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020-2024 CERN.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -34,6 +34,7 @@ class FileRecordModelMixin:
             UUIDType,
             db.ForeignKey(cls.__record_model_cls__.id, ondelete="RESTRICT"),
             nullable=False,
+            index=True,
         )
 
     @declared_attr
@@ -48,6 +49,7 @@ class FileRecordModelMixin:
             UUIDType,
             db.ForeignKey(ObjectVersion.version_id, ondelete="RESTRICT"),
             nullable=True,
+            index=True,
         )
 
     @declared_attr
@@ -59,9 +61,10 @@ class FileRecordModelMixin:
     def __table_args__(cls):
         """Table args."""
         return (
+            # To make sure we don't have duplicate keys for record files
             db.Index(
-                f"uidx_{cls.__tablename__}_id_key",
-                "id",
+                f"uidx_{cls.__tablename__}_record_id_key",
+                "record_id",
                 "key",
                 unique=True,
             ),

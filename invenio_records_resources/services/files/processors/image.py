@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2021 CERN.
+# Copyright (C) 2021-2024 CERN.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -54,8 +54,9 @@ class ImageMetadataExtractor(FileProcessor):
 
         with file_record.open_stream("rb") as fp:
             with Image.ping(file=fp, format=ext) as img:
-                width = img.width
-                height = img.height
-
+                # Get image or first frame of sequence
+                img_or_seq = img if not len(img.sequence) else img.sequence[0]
+                width = img_or_seq.width
+                height = img_or_seq.height
         if width > 0 and height > 0:
             file_record.metadata.update({"width": width, "height": height})

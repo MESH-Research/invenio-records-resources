@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2020-2023 CERN.
+    Copyright (C) 2020-2024 CERN.
 
     Invenio-Records-Resources is free software; you can redistribute it and/or
     modify it under the terms of the MIT License; see LICENSE file for more
@@ -7,6 +7,40 @@
 
 Changes
 =======
+
+Version 5.2.4 (released 2024-02-27)
+
+- processors: updated file metadata extractor to handle multi-sequence images
+
+Version 5.2.3 (released 2024-02-16)
+
+- schema: avoid mutating original data in pre_load
+
+Version 5.2.2 (released 2024-02-09)
+
+- models: restore file record key unique index
+
+Version 5.2.1 (released 2024-02-09)
+
+- models: remove unique constraint for file record key
+
+Version 5.2.0 (released 2024-02-05)
+
+- models: fix record file indices
+- models: add index on object_version_id
+- tasks: improve exception log grouping
+
+Version 5.1.0 (released 2024-02-02)
+
+- queryparser: add search field value mapping
+
+Version 5.0.0 (released 2024-01-29)
+
+- installation: bump invenio-accounts
+
+Version 4.19.0 (2024-01-18)
+
+- file manager: copy from other bucket to improve performance
 
 Version 4.18.3 (2023-12-13)
 
