@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of Invenio.
-# Copyright (C) 2020-2023 CERN.
+# Copyright (C) 2020-2024 CERN.
 # Copyright (C) 2020 Northwestern University.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
@@ -208,6 +208,7 @@ class RecordTypeFactory(object):
                 "self": RecordLink("{+api}" + route + "/{id}"),
             },
             "links_search": pagination_links("{+api}" + route + "{?args*}"),
+            "nested_links_item": None,
         }
         if self.service_components:
             config_cls_attributes.update({"components": self.service_components})

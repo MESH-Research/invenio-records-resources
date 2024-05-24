@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020-2022 CERN.
+# Copyright (C) 2020-2024 CERN.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -134,6 +134,32 @@ class Operation:
     def on_post_rollback(self, uow):
         """Called right after the rollback phase."""
         pass
+
+
+class ModelCommitOp(Operation):
+    """SQLAlchemy model add/update operation."""
+
+    def __init__(self, model):
+        """Initialize the commit operation."""
+        super().__init__()
+        self._model = model
+
+    def on_register(self, uow):
+        """Add model to db session."""
+        uow.session.add(self._model)
+
+
+class ModelDeleteOp(Operation):
+    """SQLAlchemy model delete operation."""
+
+    def __init__(self, model):
+        """Initialize the set delete operation."""
+        super().__init__()
+        self._model = model
+
+    def on_register(self, uow):
+        """Delete model."""
+        uow.session.delete(self._model)
 
 
 class RecordCommitOp(Operation):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020-2022 CERN.
+# Copyright (C) 2020-2024 CERN.
 # Copyright (C) 2020 Northwestern University.
 # Copyright (C) 2020 European Union.
 #
@@ -19,11 +19,14 @@ from invenio_search.engine import dsl
 from kombu import Queue
 from werkzeug.local import LocalProxy
 
-from invenio_records_resources.services.errors import PermissionDeniedError
+from invenio_records_resources.services.errors import (
+    PermissionDeniedError,
+    RecordPermissionDeniedError,
+)
 
 from ..base import LinksTemplate, Service
 from ..errors import RevisionIdMismatchError
-from ..uow import RecordCommitOp, RecordDeleteOp, RecordIndexOp, unit_of_work
+from ..uow import RecordCommitOp, RecordDeleteOp, unit_of_work
 from .schema import ServiceSchemaWrapper
 
 
@@ -254,7 +257,9 @@ class RecordService(Service, RecordIndexerMixin):
             expand=expand,
         )
 
-    def scan(self, identity, params=None, search_preference=None, **kwargs):
+    def scan(
+        self, identity, params=None, search_preference=None, expand=False, **kwargs
+    ):
         """Scan for records matching the querystring."""
         self.require_permission(identity, "search")
 
@@ -271,6 +276,8 @@ class RecordService(Service, RecordIndexerMixin):
             params,
             links_tpl=None,
             links_item_tpl=self.links_item_tpl,
+            expandable_fields=self.expandable_fields,
+            expand=expand,
         )
 
     def reindex(
@@ -361,6 +368,7 @@ class RecordService(Service, RecordIndexerMixin):
             identity,
             record,
             links_tpl=self.links_item_tpl,
+            nested_links_item=getattr(self.config, "nested_links_item", None),
             errors=errors,
             expandable_fields=self.expandable_fields,
             expand=expand,
@@ -370,8 +378,10 @@ class RecordService(Service, RecordIndexerMixin):
         """Retrieve a record."""
         # Resolve and require permission
         record = self.record_cls.pid.resolve(id_)
-        self.require_permission(identity, action, record=record)
-
+        try:
+            self.require_permission(identity, action, record=record)
+        except PermissionDeniedError as e:
+            raise RecordPermissionDeniedError(action_name=action, record=record)
         # Run components
         for component in self.components:
             if hasattr(component, "read"):
@@ -383,6 +393,7 @@ class RecordService(Service, RecordIndexerMixin):
             record,
             links_tpl=self.links_item_tpl,
             expandable_fields=self.expandable_fields,
+            nested_links_item=getattr(self.config, "nested_links_item", None),
             expand=expand,
         )
 
@@ -486,6 +497,7 @@ class RecordService(Service, RecordIndexerMixin):
             identity,
             record,
             links_tpl=self.links_item_tpl,
+            nested_links_item=getattr(self.config, "nested_links_item", None),
             expandable_fields=self.expandable_fields,
             expand=expand,
         )

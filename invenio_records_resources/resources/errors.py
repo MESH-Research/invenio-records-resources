@@ -38,6 +38,7 @@ from ..services.errors import (
     FilesCountExceededException,
     PermissionDeniedError,
     QuerystringValidationError,
+    RecordPermissionDeniedError,
     RevisionIdMismatchError,
 )
 
@@ -119,6 +120,12 @@ class ErrorHandlersMixin:
             )
         ),
         PermissionDeniedError: create_error_handler(
+            HTTPJSONException(
+                code=403,
+                description="Permission denied.",
+            )
+        ),
+        RecordPermissionDeniedError: create_error_handler(
             HTTPJSONException(
                 code=403,
                 description="Permission denied.",

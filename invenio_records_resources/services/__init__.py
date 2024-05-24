@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020-2024 CERN.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -8,8 +8,14 @@
 
 """High-level API for wokring with records, files, pids and search."""
 
-
-from .base import ConditionalLink, Link, LinksTemplate, Service, ServiceConfig
+from .base import (
+    ConditionalLink,
+    Link,
+    LinksTemplate,
+    NestedLinks,
+    Service,
+    ServiceConfig,
+)
 from .files import FileLink, FileService, FileServiceConfig
 from .records import (
     RecordIndexerMixin,
@@ -37,4 +43,5 @@ __all__ = (
     "ServiceConfig",
     "ServiceSchemaWrapper",
     "RecordIndexerMixin",
+    "NestedLinks",
 )

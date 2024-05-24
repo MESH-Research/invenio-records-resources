@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022 CERN.
+# Copyright (C) 2022-2024 CERN.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -11,6 +11,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
+from flask import current_app
 from fs.errors import CreateFailed
 from invenio_files_rest.errors import FileSizeError
 from invenio_i18n import lazy_gettext as _
@@ -62,7 +63,7 @@ class BaseTransfer(ABC):
         self.uow = uow
 
     @abstractmethod
-    def init_file(self, record, file_metadata):
+    def init_file(self, record, file_data):
         """Initialize a file."""
         raise NotImplementedError()
 
@@ -91,9 +92,18 @@ class BaseTransfer(ABC):
         # fetch files can be committed, its up to permissions to decide by who
         # e.g. system, since its the one downloading the file
         record.files.commit(file_key)
+        f_obj = record.files.get(file_key)
+        f_inst = getattr(f_obj, "file", None)
+        file_size = getattr(f_inst, "size", None)
+        if file_size == 0:
+            allow_empty_files = current_app.config.get(
+                "RECORDS_RESOURCES_ALLOW_EMPTY_FILES", True
+            )
+            if not allow_empty_files:
+                raise FileSizeError(description=_("Empty files are not accepted."))
 
     # @abstractmethod
-    # def read_file_content(self, record, file_metadata):
+    # def read_file_content(self, record, data):
     #     """Read a file content."""
     #     pass
 
@@ -105,13 +115,13 @@ class LocalTransfer(BaseTransfer):
         """Constructor."""
         super().__init__(TransferType.LOCAL, **kwargs)
 
-    def init_file(self, record, file_metadata):
+    def init_file(self, record, file_data):
         """Initialize a file."""
-        uri = file_metadata.pop("uri", None)
+        uri = file_data.pop("uri", None)
         if uri:
             raise Exception("Cannot set URI for local files.")
 
-        file = record.files.create(key=file_metadata.pop("key"), data=file_metadata)
+        file = record.files.create(key=file_data.pop("key"), data=file_data)
 
         return file
 
@@ -130,9 +140,9 @@ class FetchTransfer(BaseTransfer):
         """Constructor."""
         super().__init__(TransferType.FETCH, **kwargs)
 
-    def init_file(self, record, file_metadata):
+    def init_file(self, record, file_data):
         """Initialize a file."""
-        uri = file_metadata.pop("uri", None)
+        uri = file_data.pop("uri", None)
         if not uri:
             raise Exception("URI is required for fetch files.")
 
@@ -140,15 +150,15 @@ class FetchTransfer(BaseTransfer):
             "file": {
                 "uri": uri,
                 "storage_class": self.type,
-                "checksum": file_metadata.pop("checksum", None),
-                "size": file_metadata.pop("size", None),
+                "checksum": file_data.pop("checksum", None),
+                "size": file_data.pop("size", None),
             }
         }
 
-        file_key = file_metadata.pop("key")
+        file_key = file_data.pop("key")
         file = record.files.create(
             key=file_key,
-            data=file_metadata,
+            data=file_data,
             obj=obj_kwargs,
         )
 

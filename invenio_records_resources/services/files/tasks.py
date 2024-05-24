@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022 CERN.
+# Copyright (C) 2022-2024 CERN.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -23,7 +23,7 @@ def fetch_file(service_id, record_id, file_key):
     try:
         service = current_service_registry.get(service_id)
         file_record = service.read_file_metadata(system_identity, record_id, file_key)
-        source_url = file_record.data["uri"]
+        source_url = file_record._file.file.uri
         # download file
         # verify=True for self signed certificates by default
         with requests.get(source_url, stream=True, allow_redirects=True) as response:

@@ -8,6 +8,49 @@
 Changes
 =======
 
+Version 5.10.0 (released 2024-05-22)
+
+- uow: add generic DB Model operations
+
+Version 5.9.2 (released 2024-05-22)
+
+- isort: fix imports
+
+Version 5.9.1 (released 2024-05-22)
+
+- errors: add error handler for RecordPermissionDeniedError
+
+Version 5.9.0 (released 2024-05-22)
+
+- errors: add RecordPermissionDeniedError
+
+Version 5.8.0 (released 2024-05-21)
+
+- processors: optionally use PyVIPS for image metadata
+
+Version 5.7.0 (released 2024-05-06)
+
+- files-schema: hide `uri` from serialization
+- records: added access field to files
+
+Version 5.6.0 (released 2024-04-23)
+
+- services: add support for nested links
+
+Version 5.5.0 (released 2024-04-09)
+
+* records: add calculated system field with indexing; allows calculated system field to cache the value in the index, and
+  use the cached value when reading from the index.
+
+Version 5.4.0 (released 2024-03-22)
+
+- installation: upgrade invenio-app, invenio-base, invenio-accounts
+  (removes before_first_request_deprecation)
+
+Version 5.3.0 (released 2024-03-20)
+
+- facets: provide new CombinedTermsFacet (facet to use for nested subjects)
+
 Version 5.2.4 (released 2024-02-27)
 
 - processors: updated file metadata extractor to handle multi-sequence images

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020-2022 CERN.
+# Copyright (C) 2020-2024 CERN.
 # Copyright (C) 2020 European Union.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
@@ -22,8 +22,8 @@ from marshmallow import (
     validate,
     validates,
 )
-from marshmallow.fields import UUID, Dict, Integer, Str
-from marshmallow_utils.fields import GenMethod, Links, SanitizedUnicode, TZDateTime
+from marshmallow.fields import UUID, Boolean, Dict, Integer, Nested, Str
+from marshmallow_utils.fields import GenMethod, Links, TZDateTime
 
 from .transfer import TransferType
 
@@ -55,7 +55,7 @@ class InitFileSchema(Schema):
 
     key = Str(required=True)
     storage_class = Str()
-    uri = Str()
+    uri = Str(load_only=True)
     checksum = Str()
     size = Integer()
 
@@ -101,6 +101,17 @@ class InitFileSchema(Schema):
         return data
 
 
+class FileAccessSchema(Schema):
+    """Schema for file access."""
+
+    class Meta:
+        """Meta."""
+
+        unknown = RAISE
+
+    hidden = Boolean()
+
+
 class FileSchema(InitFileSchema):
     """Service schema for files."""
 
@@ -113,11 +124,13 @@ class FileSchema(InitFileSchema):
     updated = TZDateTime(timezone=timezone.utc, format="iso", dump_only=True)
 
     status = GenMethod("dump_status")
-    metadata = Dict(dump_only=True)
     mimetype = Str(dump_only=True, attribute="file.mimetype")
-    version_id = UUID(attribute="file.version_id")
-    file_id = UUID(attribute="file.file_id")
-    bucket_id = UUID(attribute="file.bucket_id")
+    version_id = UUID(attribute="file.version_id", dump_only=True)
+    file_id = UUID(attribute="file.file_id", dump_only=True)
+    bucket_id = UUID(attribute="file.bucket_id", dump_only=True)
+
+    metadata = Dict()
+    access = Nested(FileAccessSchema)
 
     links = Links()
 

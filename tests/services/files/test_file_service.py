@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020-2022 CERN.
+# Copyright (C) 2020-2024 CERN.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 import pytest
 from invenio_access.permissions import system_identity
+from invenio_files_rest.errors import FileSizeError
 from marshmallow import ValidationError
 
 from invenio_records_resources.services.errors import (
@@ -54,7 +55,7 @@ def mock_request():
 #
 
 
-def test_file_flow(file_service, location, example_file_record, identity_simple):
+def test_file_flow(file_service, location, example_file_record, identity_simple, db):
     """Test the lifecycle of a file.
 
     - Initialize file saving
@@ -108,7 +109,6 @@ def test_file_flow(file_service, location, example_file_record, identity_simple)
     result = file_service.read_file_metadata(identity_simple, recid, "article.txt")
     assert result.to_dict()["key"] == file_to_initialise[0]["key"]
     assert result.to_dict()["storage_class"] == "L"
-    assert "uri" not in result.to_dict()
 
     # Retrieve file
     result = file_service.get_file_content(identity_simple, recid, "article.txt")
@@ -129,6 +129,7 @@ def test_file_flow(file_service, location, example_file_record, identity_simple)
 
 
 def test_init_files(file_service, location, example_file_record, identity_simple):
+    """Test the initialization of local files, with different metadata and access."""
     recid = example_file_record["id"]
 
     # Pass an object with missing required field
@@ -144,17 +145,21 @@ def test_init_files(file_service, location, example_file_record, identity_simple
 
     # Pass an object with added field
     file_to_initialise = [
-        {
-            "key": "article.txt",
-            "foo": "bar",
-        }
+        {"key": "article.txt", "metadata": {"foo": "bar"}},
+        {"key": "article.csv", "metadata": {"foo": "baz"}, "access": {"hidden": True}},
     ]
 
     result = file_service.init_files(identity_simple, recid, file_to_initialise)
 
-    entry = result.to_dict()["entries"][0]
-    assert file_to_initialise[0]["key"] == entry["key"]
-    assert file_to_initialise[0]["foo"] == entry["metadata"]["foo"]
+    first_entry = result.to_dict()["entries"][0]
+    assert file_to_initialise[0]["key"] == first_entry["key"]
+    assert file_to_initialise[0]["metadata"] == first_entry["metadata"]
+    assert first_entry["access"]["hidden"] is False  # default value
+
+    second_entry = result.to_dict()["entries"][1]
+    assert file_to_initialise[1]["key"] == second_entry["key"]
+    assert file_to_initialise[1]["metadata"] == second_entry["metadata"]
+    assert second_entry["access"]["hidden"] is True
 
 
 #
@@ -287,7 +292,6 @@ def test_content_and_commit_external_file(
     result = result.to_dict()
     assert result["key"] == file_to_initialise[0]["key"]
     assert result["storage_class"] == "F"
-    assert "uri" in result
 
     # Set content as user
     content = BytesIO(b"test file content")
@@ -311,7 +315,7 @@ def test_content_and_commit_external_file(
     result = result.to_dict()
     assert result["key"] == file_to_initialise[0]["key"]
     assert result["storage_class"] == "F"  # not commited yet
-    assert "uri" in result
+    assert "uri" not in result
 
     # Commit as user
     with pytest.raises(PermissionDeniedError):
@@ -363,7 +367,6 @@ def test_delete_not_committed_external_file(
     result = result.to_dict()
     assert result["key"] == file_to_initialise[0]["key"]
     assert result["storage_class"] == "F"
-    assert "uri" in result
 
     # Delete file
     file_service.delete_file(identity_simple, recid, "article.txt")
@@ -434,7 +437,6 @@ def test_read_not_committed_external_file(
     result = result.to_dict()
     assert result["key"] == file_to_initialise[0]["key"]
     assert result["storage_class"] == "F"
-    assert "uri" in result
 
     # List files
     result = file_service.list_files(identity_simple, recid)
@@ -445,8 +447,54 @@ def test_read_not_committed_external_file(
     result = result.to_dict()
     assert result["key"] == file_to_initialise[0]["key"]
     assert result["storage_class"] == "F"  # changed after commit
-    assert "uri" in result
 
     # Retrieve file
     with pytest.raises(PermissionDeniedError):
         file_service.get_file_content(identity_simple, recid, "article.txt")
+
+
+@pytest.mark.parametrize("allow_empty_files", [True, False])
+def test_empty_files(
+    file_service,
+    location,
+    example_file_record,
+    identity_simple,
+    allow_empty_files,
+    monkeypatch,
+    base_app,
+):
+    """Test the lifecycle of an empty file."""
+    monkeypatch.setitem(
+        base_app.config, "RECORDS_RESOURCES_ALLOW_EMPTY_FILES", allow_empty_files
+    )
+    recid = example_file_record["id"]
+    file_to_initialise = [
+        {
+            "key": "article.txt",
+            "checksum": "md5:c785060c866796cc2a1708c997154c8e",
+            "size": 0,  # 2kB
+            "metadata": {
+                "description": "Published article PDF.",
+            },
+        }
+    ]
+    # Initialize file saving
+    result = file_service.init_files(identity_simple, recid, file_to_initialise)
+    assert result.to_dict()["entries"][0]["key"] == file_to_initialise[0]["key"]
+    # for to_file in to_files:
+    content = BytesIO()
+    result = file_service.set_file_content(
+        identity_simple,
+        recid,
+        file_to_initialise[0]["key"],
+        content,
+        content.getbuffer().nbytes,
+    )
+    assert result.to_dict()["key"] == file_to_initialise[0]["key"]
+
+    if allow_empty_files:
+        result = file_service.commit_file(identity_simple, recid, "article.txt")
+        assert result.to_dict()["key"] == file_to_initialise[0]["key"]
+    else:
+        with pytest.raises(FileSizeError):
+            result = file_service.commit_file(identity_simple, recid, "article.txt")
