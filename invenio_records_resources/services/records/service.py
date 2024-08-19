@@ -115,7 +115,9 @@ class RecordService(Service, RecordIndexerMixin):
             expected_revision_id is not None
             and record.revision_id != expected_revision_id
         ):
-            raise RevisionIdMismatchError(record.revision_id, expected_revision_id)
+            raise RevisionIdMismatchError(
+                record.revision_id, expected_revision_id
+            )
 
     def create_search(
         self,
@@ -177,6 +179,28 @@ class RecordService(Service, RecordIndexerMixin):
         versioning=True,
     ):
         """Factory for creating a Search DSL instance."""
+
+        from flask import current_app
+
+        current_app.logger.info(
+            f"params_interpreters_cls: {search_opts.params_interpreters_cls}"
+        )
+        current_app.logger.info(
+            f"pagination_options: {search_opts.pagination_options}"
+        )
+        current_app.logger.info(f"sort_options: {search_opts.sort_options}")
+        current_app.logger.info(
+            f"query_parser_cls: {search_opts.query_parser_cls}"
+        )
+        current_app.logger.info(f"search_cls: {search_opts.search_cls}")
+        current_app.logger.info(f"sort_default: {search_opts.sort_default}")
+        current_app.logger.info(
+            f"sort_default_no_query: {search_opts.sort_default_no_query}"
+        )
+        current_app.logger.info(
+            f"suggest_parser_cls: {search_opts.suggest_parser_cls}"
+        )
+
         search = self.create_search(
             identity,
             record_cls,
@@ -189,7 +213,12 @@ class RecordService(Service, RecordIndexerMixin):
 
         # Run search args evaluator
         for interpreter_cls in search_opts.params_interpreters_cls:
-            search = interpreter_cls(search_opts).apply(identity, search, params)
+            search = interpreter_cls(search_opts).apply(
+                identity, search, params
+            )
+
+        current_app.logger.info(f"search object: {search}")
+        current_app.logger.info(f"search.to_dict(): {search.to_dict()}")
 
         return search
 
@@ -214,6 +243,13 @@ class RecordService(Service, RecordIndexerMixin):
         # .search(idty, params={'q': '...'}).
         params.update(kwargs)
 
+        from flask import current_app
+
+        current_app.logger.info(f"action: {action}")
+        current_app.logger.info(f"params: {params}")
+        current_app.logger.info(f"self.record_cls: {self.record_cls}")
+        current_app.logger.info(f"self.config.search: {self.config.search}")
+
         # Create an search engine DSL
         search = self.search_request(
             identity,
@@ -236,14 +272,21 @@ class RecordService(Service, RecordIndexerMixin):
     # High-level API
     #
     def search(
-        self, identity, params=None, search_preference=None, expand=False, **kwargs
+        self,
+        identity,
+        params=None,
+        search_preference=None,
+        expand=False,
+        **kwargs,
     ):
         """Search for records matching the querystring."""
         self.require_permission(identity, "search")
 
         # Prepare and execute the search
         params = params or {}
-        search = self._search("search", identity, params, search_preference, **kwargs)
+        search = self._search(
+            "search", identity, params, search_preference, **kwargs
+        )
         search_result = search.execute()
 
         return self.result_list(
@@ -251,14 +294,21 @@ class RecordService(Service, RecordIndexerMixin):
             identity,
             search_result,
             params,
-            links_tpl=LinksTemplate(self.config.links_search, context={"args": params}),
+            links_tpl=LinksTemplate(
+                self.config.links_search, context={"args": params}
+            ),
             links_item_tpl=self.links_item_tpl,
             expandable_fields=self.expandable_fields,
             expand=expand,
         )
 
     def scan(
-        self, identity, params=None, search_preference=None, expand=False, **kwargs
+        self,
+        identity,
+        params=None,
+        search_preference=None,
+        expand=False,
+        **kwargs,
     ):
         """Scan for records matching the querystring."""
         self.require_permission(identity, "search")
@@ -324,11 +374,19 @@ class RecordService(Service, RecordIndexerMixin):
         :param identity: Identity of user creating the record.
         :param data: Input data according to the data schema.
         """
-        return self._create(self.record_cls, identity, data, uow=uow, expand=expand)
+        return self._create(
+            self.record_cls, identity, data, uow=uow, expand=expand
+        )
 
     @unit_of_work()
     def _create(
-        self, record_cls, identity, data, raise_errors=True, uow=None, expand=False
+        self,
+        record_cls,
+        identity,
+        data,
+        raise_errors=True,
+        uow=None,
+        expand=False,
     ):
         """Create a record.
 
@@ -381,7 +439,9 @@ class RecordService(Service, RecordIndexerMixin):
         try:
             self.require_permission(identity, action, record=record)
         except PermissionDeniedError as e:
-            raise RecordPermissionDeniedError(action_name=action, record=record)
+            raise RecordPermissionDeniedError(
+                action_name=action, record=record
+            )
         # Run components
         for component in self.components:
             if hasattr(component, "read"):
@@ -435,7 +495,13 @@ class RecordService(Service, RecordIndexerMixin):
         # Fetch only certain fields - explicitly add internal system fields
         # required to use the result list to dump the output.
         if fields:
-            dumper_fields = ["uuid", "version_id", "created", "updated", "expires_at"]
+            dumper_fields = [
+                "uuid",
+                "version_id",
+                "created",
+                "updated",
+                "expires_at",
+            ]
             fields = fields + dumper_fields
             # ES 7.11+ supports a more efficient way of fetching only certain
             # fields using the "fields"-option to a query. However, ES 7 and
@@ -469,12 +535,16 @@ class RecordService(Service, RecordIndexerMixin):
     def read_all(self, identity, fields, max_records=150, **kwargs):
         """Search for records matching the querystring."""
         search_query = dsl.Q("match_all")
-        results = self._read_many(identity, search_query, fields, max_records, **kwargs)
+        results = self._read_many(
+            identity, search_query, fields, max_records, **kwargs
+        )
 
         return self.result_list(self, identity, results)
 
     @unit_of_work()
-    def update(self, identity, id_, data, revision_id=None, uow=None, expand=False):
+    def update(
+        self, identity, id_, data, revision_id=None, uow=None, expand=False
+    ):
         """Replace a record."""
         record = self.record_cls.pid.resolve(id_)
 
@@ -484,11 +554,14 @@ class RecordService(Service, RecordIndexerMixin):
         self.require_permission(identity, "update", record=record)
 
         data, _ = self.schema.load(
-            data, context=dict(identity=identity, pid=record.pid, record=record)
+            data,
+            context=dict(identity=identity, pid=record.pid, record=record),
         )
 
         # Run components
-        self.run_components("update", identity, data=data, record=record, uow=uow)
+        self.run_components(
+            "update", identity, data=data, record=record, uow=uow
+        )
 
         uow.register(RecordCommitOp(record, self.indexer))
 
@@ -562,7 +635,10 @@ class RecordService(Service, RecordIndexerMixin):
                         "bool",
                         must=[dsl.Q("term", **{f"{field}.id": recid})],
                         must_not=[
-                            dsl.Q("term", **{f"{field}.@v": f"{uuid}::{revision_id}"})
+                            dsl.Q(
+                                "term",
+                                **{f"{field}.@v": f"{uuid}::{revision_id}"},
+                            )
                         ],
                     )
                 )
@@ -574,7 +650,10 @@ class RecordService(Service, RecordIndexerMixin):
         ]
         for chunked_clause in chunked_clauses:
             search_query = dsl.Q(
-                "bool", minimum_should_match=1, should=chunked_clause, filter=filter
+                "bool",
+                minimum_should_match=1,
+                should=chunked_clause,
+                filter=filter,
             )
 
             self.reindex(identity, search_query=search_query)
