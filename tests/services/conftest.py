@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020-2021 CERN.
+# Copyright (C) 2020-2024 CERN.
 # Copyright (C) 2021 Northwestern University.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
@@ -89,3 +89,11 @@ def cache():
         yield current_cache
     finally:
         current_cache.clear()
+
+
+@pytest.fixture()
+def invalid_input_data():
+    """Input data (as coming from the view layer)."""
+    return {
+        "metadata": {"title": 10},
+    }

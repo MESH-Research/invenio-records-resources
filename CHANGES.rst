@@ -8,9 +8,28 @@
 Changes
 =======
 
-Version 5.10.0 (released 2024-05-22)
+Version v6.3.0 (released 2024-08-08)
 
-- uow: add generic DB Model operations
+- files: sync file access status
+- files: syncing metadata changes for uploaded files
+- files: update for retriveing files bucket
+
+Version v6.2.0 (released 2024-08-02)
+
+- service: add bulk create/update method
+
+Version v6.1.1 (released 2024-07-30)
+
+- services: reraise permission errors for records
+
+Version 6.1.0 (released 2024-07-05)
+
+- files: sync metadata on file edit
+
+Version 6.0.0 (released 2024-06-04)
+
+- uow: updated Task Operation to use `apply_async` instead of `delay`
+- uow: added Revoke Task Operation
 
 Version 5.9.2 (released 2024-05-22)
 
