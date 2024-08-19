@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020-2024 CERN.
 # Copyright (C) 2020 Northwestern University.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
@@ -20,3 +20,11 @@ class ServiceItemResult(ServiceResult):
 
 class ServiceListResult(ServiceResult):
     """Base class for a service result for a list of items."""
+
+
+class ServiceBulkItemResult(ServiceResult):
+    """Base class for a service result for a single item performed on a bulk operation."""
+
+
+class ServiceBulkListResult(ServiceResult):
+    """Base class for a service result for a list of items performed on a bulk operation."""

@@ -360,7 +360,23 @@ class FilesManager(MutableMapping):
                 if obj_or_key in self:
                     del self[obj_or_key]
             elif operation == "add":
-                self[obj_or_key.key] = obj_or_key
+                f_key = obj_or_key.key
+                rf = src_files[f_key]
+                if rf.metadata is not None:
+                    self[f_key] = obj_or_key, dict(rf)
+                else:
+                    self[f_key] = obj_or_key
+
+        # Check for metadata and access changes
+        for key, dest_rf in self.entries.items():
+            if key in src_files:
+                src_rf = src_files[key]
+                if (
+                    src_rf.metadata != dest_rf.metadata
+                    or src_rf.access != dest_rf.access
+                ):
+                    obj_or_key = dest_rf.object_version
+                    self[key] = obj_or_key, dict(src_rf)
 
     @property
     def entries(self):

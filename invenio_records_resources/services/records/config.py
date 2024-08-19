@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020-2022 CERN.
+# Copyright (C) 2020-2024 CERN.
 # Copyright (C) 2020 Northwestern University.
 # Copyright (C) 2023 Graz University of Technology.
 #
@@ -20,7 +20,7 @@ from ..base import ServiceConfig
 from .components import MetadataComponent
 from .links import RecordLink, pagination_links
 from .params import FacetsParam, PaginationParam, QueryParser, QueryStrParam, SortParam
-from .results import RecordItem, RecordList
+from .results import RecordBulkItem, RecordBulkList, RecordItem, RecordList
 
 
 class SearchOptions:
@@ -58,6 +58,8 @@ class RecordServiceConfig(ServiceConfig):
     permission_policy_cls = RecordPermissionPolicy
     result_item_cls = RecordItem
     result_list_cls = RecordList
+    result_bulk_item_cls = RecordBulkItem
+    result_bulk_list_cls = RecordBulkList
 
     # Record specific configuration
     record_cls = Record

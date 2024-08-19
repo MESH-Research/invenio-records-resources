@@ -17,6 +17,8 @@ from invenio_records_permissions.api import permission_filter
 from invenio_search import current_search_client
 from invenio_search.engine import dsl
 from kombu import Queue
+from marshmallow import ValidationError
+from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.local import LocalProxy
 
 from invenio_records_resources.services.errors import (
@@ -26,7 +28,7 @@ from invenio_records_resources.services.errors import (
 
 from ..base import LinksTemplate, Service
 from ..errors import RevisionIdMismatchError
-from ..uow import RecordCommitOp, RecordDeleteOp, unit_of_work
+from ..uow import RecordBulkCommitOp, RecordCommitOp, RecordDeleteOp, unit_of_work
 from .schema import ServiceSchemaWrapper
 
 
@@ -380,7 +382,7 @@ class RecordService(Service, RecordIndexerMixin):
         record = self.record_cls.pid.resolve(id_)
         try:
             self.require_permission(identity, action, record=record)
-        except PermissionDeniedError as e:
+        except PermissionDeniedError:
             raise RecordPermissionDeniedError(action_name=action, record=record)
         # Run components
         for component in self.components:
@@ -579,3 +581,83 @@ class RecordService(Service, RecordIndexerMixin):
 
             self.reindex(identity, search_query=search_query)
         return True
+
+    @unit_of_work()
+    def create_or_update_many(self, identity, data, uow=None):
+        """Create or update a list of records.
+
+        This method takes a list of record data and creates or updates the corresponding records.
+
+        :param identity: The user identity performing the operation.
+        :param data: A list of tuples containing the record ID and record data.
+        :param uow: The unit of work to register the record operations. Defaults to None.
+        """
+        records_processed = []
+
+        self.require_permission(identity, "create_or_update_many")
+
+        def _update_record(record_dict, record):
+            """Update a record."""
+            record_data, schema_errors = self.schema.load(
+                record_dict,
+                context=dict(identity=identity, pid=record.pid, record=record),
+                raise_errors=False,
+            )
+
+            # If errors we avoid creating the record
+            if schema_errors:
+                records_processed.append(("update", record_dict, schema_errors, None))
+                return
+
+            # Run components
+            self.run_components(
+                "update", identity, data=record_data, record=record, uow=uow
+            )
+
+            records_processed.append(("update", record, schema_errors, None))
+
+        def _create_record(record_dict):
+            """Create a record."""
+            # Validate data and create record with pid
+            record_data, schema_errors = self.schema.load(
+                record_dict, context={"identity": identity}, raise_errors=False
+            )
+
+            # If errors we avoid creating the record
+            if schema_errors:
+                records_processed.append(("create", record_dict, schema_errors, None))
+                return
+
+            # It's the components who saves the actual data in the record
+            record = self.record_cls.create({})
+
+            # Run components
+            self.run_components(
+                "create",
+                identity,
+                data=record_data,
+                record=record,
+                errors=schema_errors,
+                uow=uow,
+            )
+            records_processed.append(("create", record, schema_errors, None))
+
+        # We avoid using create and update methods to bulk index all records at once
+        for record_id, record_dict in data:
+            try:
+                record = self.record_cls.pid.resolve(record_id)
+                _update_record(record_dict, record)
+            except (NoResultFound, PIDDoesNotExistError):
+                _create_record(record_dict)
+            except Exception as exc:
+                records_processed.append(("create", record_dict, None, exc))
+
+        # We only commit records that have no errors
+        records = [
+            record
+            for _, record, errors, exc in records_processed
+            if errors == [] and exc is None
+        ]
+        uow.register(RecordBulkCommitOp(records, self.indexer))
+
+        return self.result_bulk_list(self, identity, records_processed)
