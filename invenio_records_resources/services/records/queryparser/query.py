@@ -17,7 +17,9 @@ from luqum.exceptions import ParseError
 from luqum.parser import parser as luqum_parser
 from werkzeug.utils import cached_property
 
-from invenio_records_resources.services.errors import QuerystringValidationError
+from invenio_records_resources.services.errors import (
+    QuerystringValidationError,
+)
 
 
 class QueryParser:
@@ -64,7 +66,9 @@ class QueryParser:
             )
     """
 
-    def __init__(self, identity=None, extra_params=None, tree_transformer_cls=None):
+    def __init__(
+        self, identity=None, extra_params=None, tree_transformer_cls=None
+    ):
         """Initialise the parser."""
         self.identity = identity
         self.tree_transformer_cls = tree_transformer_cls
@@ -106,7 +110,9 @@ class QueryParser:
                 repeated.add(field_name)
 
         # fields = original fields + (allow list - repeated without boosting)
-        return list(set(self._fields).union(self.allow_list.difference(repeated)))
+        return list(
+            set(self._fields).union(self.allow_list.difference(repeated))
+        )
 
     @classmethod
     def factory(cls, tree_transformer_cls=None, **extra_params):
@@ -129,10 +135,17 @@ class QueryParser:
                     mapping=self.mapping,
                     allow_list=self.allow_list,
                 )
-                new_tree = transformer.visit(tree, context={"identity": self.identity})
+                new_tree = transformer.visit(
+                    tree, context={"identity": self.identity}
+                )
                 new_tree = auto_head_tail(new_tree)
                 query_str = str(new_tree)
-            return dsl.Q("query_string", query=query_str, **self.extra_params)
+            print("added wildcard")
+            return dsl.Q(
+                "query_string",
+                query=f"{query_str}*",
+                **self.extra_params,
+            )
         except (ParseError, QuerystringValidationError):
             # Fallback to a multi-match query.
             if self.allow_list:
@@ -144,4 +157,8 @@ class QueryParser:
             # if there is no allow list we pass the parameters as default, without
             # modifying the fields, or nothing if it was not passed. this is to
             # avoid passing `fields=None`
-            return dsl.Q("multi_match", query=query_str, **self.extra_params)
+            return dsl.Q(
+                "multi_match",
+                query=query_str,
+                **self.extra_params,
+            )
