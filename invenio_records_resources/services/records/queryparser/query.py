@@ -140,7 +140,6 @@ class QueryParser:
                 )
                 new_tree = auto_head_tail(new_tree)
                 query_str = str(new_tree)
-            print("added wildcard")
             return dsl.Q(
                 "query_string",
                 query=f"{query_str}*",
