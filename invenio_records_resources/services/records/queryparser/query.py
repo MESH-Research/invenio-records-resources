@@ -142,7 +142,7 @@ class QueryParser:
                 query_str = str(new_tree)
             return dsl.Q(
                 "query_string",
-                query=f"{query_str}*",
+                query=query_str,
                 **self.extra_params,
             )
         except (ParseError, QuerystringValidationError):
