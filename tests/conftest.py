@@ -2,6 +2,8 @@
 #
 # Copyright (C) 2020-2023 CERN.
 # Copyright (C) 2020 Northwestern University.
+# Copyright (C) 2025 CESNET.
+# Copyright (C) 2025 Graz University of Technology.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -16,9 +18,9 @@ fixtures are available.
 import pytest
 from flask_principal import Identity, Need, UserNeed
 from invenio_app.factory import create_api as _create_api
-from mock_module.config import MockFileServiceConfig, ServiceConfig
 
 from invenio_records_resources.services import FileService, RecordService
+from tests.mock_module.config import FileServiceConfig, ServiceConfig
 
 pytest_plugins = ("celery.contrib.pytest",)
 
@@ -32,7 +34,9 @@ def app_config(app_config):
     app_config["RECORDS_RESOURCES_FILES_ALLOWED_DOMAINS"] = [
         "inveniordm.test",
     ]
-
+    app_config["RECORDS_RESOURCES_FILES_ALLOWED_REMOTE_DOMAINS"] = [
+        "inveniordm.test",
+    ]
     app_config["FILES_REST_STORAGE_CLASS_LIST"] = {
         "L": "Local",
         "F": "Fetch",
@@ -48,6 +52,9 @@ def app_config(app_config):
         "invenio_jsonschemas.proxies.current_refresolver_store"
     )
 
+    app_config["THEME_FRONTPAGE"] = False
+    app_config["JSONSCHEMAS_HOST"] = "not-used"
+
     return app_config
 
 
@@ -56,13 +63,18 @@ def extra_entry_points():
     """Extra entry points to load the mock_module features."""
     return {
         "invenio_db.model": [
-            "mock_module = mock_module.models",
+            "mock_module = tests.mock_module.models",
         ],
         "invenio_jsonschemas.schemas": [
-            "mock_module = mock_module.jsonschemas",
+            "mock_module = tests.mock_module.jsonschemas",
         ],
         "invenio_search.mappings": [
-            "records = mock_module.mappings",
+            "records = tests.mock_module.mappings",
+        ],
+        "invenio_base.api_blueprints": [
+            "mock_module_mocks = tests.mock_module:create_mocks_bp",
+            # still present even though above doesn't support files
+            "mock_module_mocks_files = tests.mock_module:create_mocks_files_bp",
         ],
     }
 
@@ -76,7 +88,7 @@ def create_app(instance_path, entry_points):
 @pytest.fixture(scope="module")
 def file_service():
     """File service shared fixture."""
-    return FileService(MockFileServiceConfig)
+    return FileService(FileServiceConfig)
 
 
 @pytest.fixture(scope="module")
@@ -99,4 +111,5 @@ def identity_simple():
     i = Identity(1)
     i.provides.add(UserNeed(1))
     i.provides.add(Need(method="system_role", value="any_user"))
+    i.provides.add(Need(method="system_role", value="authenticated_user"))
     return i

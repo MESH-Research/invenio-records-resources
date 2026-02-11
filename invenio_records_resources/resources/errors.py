@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020-2025 CERN.
 # Copyright (C) 2020 Northwestern University
 # Copyright (C) 2023 Graz University of Technology.
 #
@@ -9,6 +9,7 @@
 # details.
 
 """Common Errors handling for Resources."""
+
 from json import JSONDecodeError
 
 import marshmallow as ma
@@ -40,6 +41,7 @@ from ..services.errors import (
     QuerystringValidationError,
     RecordPermissionDeniedError,
     RevisionIdMismatchError,
+    ValidationErrorGroup,
 )
 
 
@@ -50,7 +52,18 @@ class HTTPJSONValidationException(HTTPJSONException):
 
     def __init__(self, exception):
         """Constructor."""
-        super().__init__(code=400, errors=validation_error_to_list_errors(exception))
+        errors = None
+        if isinstance(exception, ma.ValidationError):
+            errors = validation_error_to_list_errors(exception)
+        elif isinstance(exception, ValidationErrorGroup):
+            errors = exception.errors
+        else:
+            raise TypeError(
+                "Expected a 'marshmallow.ValidationError' or 'ValidationErrorGroup', "
+                f"got {type(exception)}."
+            )
+
+        super().__init__(code=400, errors=errors)
 
 
 class HTTPJSONSearchRequestError(HTTPJSONException):
@@ -107,6 +120,9 @@ class ErrorHandlersMixin:
         ma.ValidationError: create_error_handler(
             lambda e: HTTPJSONValidationException(e)
         ),
+        ValidationErrorGroup: create_error_handler(
+            lambda e: HTTPJSONValidationException(e)
+        ),
         RevisionIdMismatchError: create_error_handler(
             lambda e: HTTPJSONException(
                 code=412,
@@ -116,56 +132,58 @@ class ErrorHandlersMixin:
         QuerystringValidationError: create_error_handler(
             HTTPJSONException(
                 code=400,
-                description="Invalid querystring parameters.",
+                description=_("Invalid querystring parameters."),
             )
         ),
         PermissionDeniedError: create_error_handler(
             HTTPJSONException(
                 code=403,
-                description="Permission denied.",
+                description=_("Permission denied."),
             )
         ),
         RecordPermissionDeniedError: create_error_handler(
             HTTPJSONException(
                 code=403,
-                description="Permission denied.",
+                description=_("Permission denied."),
             )
         ),
         PIDDeletedError: create_error_handler(
             HTTPJSONException(
                 code=410,
-                description="The record has been deleted.",
+                description=_("The record has been deleted."),
             )
         ),
         PIDAlreadyExists: create_error_handler(
             HTTPJSONException(
                 code=400,
-                description="The persistent identifier is already registered.",
+                description=_("The persistent identifier is already registered."),
             )
         ),
         PIDDoesNotExistError: create_error_handler(
             HTTPJSONException(
                 code=404,
-                description="The persistent identifier does not exist.",
+                description=_("The persistent identifier does not exist."),
             )
         ),
         PIDUnregistered: create_error_handler(
             HTTPJSONException(
                 code=404,
-                description="The persistent identifier is not registered.",
+                description=_("The persistent identifier is not registered."),
             )
         ),
         PIDRedirectedError: create_pid_redirected_error_handler(),
         NoResultFound: create_error_handler(
             HTTPJSONException(
                 code=404,
-                description="Not found.",
+                description=_("Not found."),
             )
         ),
         FacetNotFoundError: create_error_handler(
             lambda e: HTTPJSONException(
                 code=404,
-                description=f"Facet {e.vocabulary_id} not found.",
+                description=_(
+                    "Facet %(vocabulary_id)s not found.", vocabulary_id=e.vocabulary_id
+                ),
             )
         ),
         FileKeyNotFoundError: create_error_handler(
@@ -177,19 +195,19 @@ class ErrorHandlersMixin:
         JSONDecodeError: create_error_handler(
             HTTPJSONException(
                 code=400,
-                description="Unable to decode JSON data in request body.",
+                description=_("Unable to decode JSON data in request body."),
             )
         ),
         InvalidRelationValue: create_error_handler(
             HTTPJSONException(
                 code=400,
-                description="Not a valid value.",
+                description=_("Not a valid value."),
             )
         ),
         InvalidCheckValue: create_error_handler(
             HTTPJSONException(
                 code=400,
-                description="Not a valid value.",
+                description=_("Not a valid value."),
             )
         ),
         search.exceptions.RequestError: create_error_handler(
@@ -198,13 +216,15 @@ class ErrorHandlersMixin:
         FailedFileUploadException: create_error_handler(
             HTTPJSONException(
                 code=400,
-                description="The file upload transfer failed, please try again.",
+                description=_("The file upload transfer failed, please try again."),
             )
         ),
         FilesCountExceededException: create_error_handler(
             HTTPJSONException(
                 code=400,
-                description="Uploading selected files will result in exceeding the max amount per record.",
+                description=_(
+                    "Uploading selected files will result in exceeding the max amount per record."
+                ),
             )
         ),
     }

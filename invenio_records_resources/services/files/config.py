@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2020-2022 CERN.
-# Copyright (C) 2020 Northwestern University.
+# Copyright (C) 2020-2025 Northwestern University.
+# Copyright (C) 2025 CESNET.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -10,13 +11,12 @@
 """Record Service API."""
 
 from ..base import ServiceConfig
-from ..records.links import RecordLink
 from .components import (
     FileContentComponent,
     FileMetadataComponent,
+    FileMultipartContentComponent,
     FileProcessorComponent,
 )
-from .links import FileLink
 from .processors import ImageMetadataExtractor
 from .results import FileItem, FileList
 from .schema import FileSchema
@@ -41,18 +41,18 @@ class FileServiceConfig(ServiceConfig):
 
     max_files_count = 100
 
-    file_links_list = {
-        "self": RecordLink("{+api}/records/{id}/files"),
-    }
+    # Inheriting service config should define these
+    file_links_list = {}
+    file_links_item = {}
 
-    file_links_item = {
-        "self": FileLink("{+api}/records/{id}/files/{+key}"),
-        "content": FileLink("{+api}/records/{id}/files/{+key}/content"),
-    }
+    # At the resource level and link serialization (service) level
+    allow_upload = True
+    allow_archive_download = True
 
     components = [
         FileMetadataComponent,
         FileContentComponent,
+        FileMultipartContentComponent,
         FileProcessorComponent,
     ]
 

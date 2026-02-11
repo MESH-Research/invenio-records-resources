@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2022 CERN.
+# Copyright (C) 2025 Graz University of Technology.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -10,11 +11,9 @@
 
 import random
 from copy import deepcopy
+from datetime import datetime, timezone
 
-import arrow
 import pytest
-from mock_module.api import Record, RecordWithRelations
-from mock_module.config import ServiceConfig as ServiceConfigBase
 
 from invenio_records_resources.proxies import (
     current_notifications_registry,
@@ -25,6 +24,8 @@ from invenio_records_resources.services.records.components import (
     ChangeNotificationsComponent,
     RelationsComponent,
 )
+from tests.mock_module.api import Record, RecordWithRelations
+from tests.mock_module.config import ServiceConfig as ServiceConfigBase
 
 
 @pytest.fixture(scope="module")
@@ -143,7 +144,7 @@ def test_relation_update_propagation(
 
 def test_on_relation_update_limit(mocker, identity_simple, service_wrel):
     """Test on relation update max limit."""
-    notif_time = arrow.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")
+    notif_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")
     mocked_reindex = mocker.patch.object(RecordService, "reindex")
 
     def _call(n_records, limit):

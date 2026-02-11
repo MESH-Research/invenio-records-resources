@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of Invenio.
-# Copyright (C) 2021 CERN.
+# Copyright (C) 2021-2025 CERN.
 # Copyright (C) 2021-2023 Northwestern University.
+# Copyright (C) 2025 Graz University of Technology.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -10,10 +11,11 @@
 
 """Mock module schemas."""
 
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, missing, validate
 from marshmallow.utils import get_value
 from marshmallow_utils.fields import SanitizedUnicode
 
+from invenio_records_resources.services.errors import ValidationErrorGroup
 from invenio_records_resources.services.records.schema import BaseRecordSchema
 
 
@@ -64,6 +66,32 @@ class MetadataSchema(Schema):
     referenced_simple_same = fields.Str()
     referenced_other = fields.Nested(ReferencedOtherSchema)
 
+    # test field for triggering a ValidationErrorGroup exception
+    trigger_error_group = fields.Method(deserialize="load_trigger_error_group")
+
+    def load_trigger_error_group(self, value):
+        """Load trigger error group."""
+        if not value:
+            return missing
+        # NOTE: This is not meant to be in any way the proper way to return multiple
+        # validation errors in a marshmallow schema (use `marshmallow.ValidationError`
+        # instead). This is here because it's a convenient way to hook-in and raise an
+        # exception in tests.
+        raise ValidationErrorGroup(
+            errors=[
+                {
+                    "field": "metadata.trigger_error_group",
+                    "messages": ["Error 1 in error group", "Error 2 in error group"],
+                },
+                {
+                    "field": "metadata.title",
+                    "messages": ["Test warning for title field error group."],
+                    "description": "Test description for title field error group.",
+                    "severity": "warning",
+                },
+            ]
+        )
+
 
 class RecordSchema(BaseRecordSchema):
     """Test RecordSchema."""
@@ -74,7 +102,7 @@ class RecordSchema(BaseRecordSchema):
 class FilesSchema(Schema):
     """Basic files schema class."""
 
-    enabled = fields.Bool(missing=True)
+    enabled = fields.Bool(load_default=True)
     # allow unsetting
     default_preview = SanitizedUnicode(allow_none=True)
 

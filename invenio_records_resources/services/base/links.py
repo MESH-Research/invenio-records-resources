@@ -9,9 +9,11 @@
 """Utility for rendering URI template links."""
 
 import operator
+import warnings
 from copy import deepcopy
 
 from flask import current_app
+from invenio_base import invenio_url_for
 from invenio_records.dictutils import dict_lookup
 from uritemplate import URITemplate
 from werkzeug.datastructures import MultiDict
@@ -85,7 +87,14 @@ class LinksTemplate:
     def expand(self, identity, obj):
         """Expand all the link templates."""
         links = {}
-        ctx = deepcopy(self.context)
+        # A shallow copy is used to insulate the original context from
+        # addition/deletion instead of a deepcopy because some of the objects stored in
+        # the context exhibit degenerate deepcopying behaviors (e.g., objects using
+        # RelationsMapping raise RecursionError). self.context already insulates
+        # self._context, but we are being more careful given that self.context pretends
+        # to be like a regular attribute. Each `link` below should further insulate
+        # the ctx however.
+        ctx = self.context.copy()
         # pass identity to context
         ctx["identity"] = identity
         for key, link in self._links.items():
@@ -94,8 +103,13 @@ class LinksTemplate:
         return links
 
 
-class Link:
-    """Utility class for keeping track of and resolve links."""
+class ExternalLink:
+    """Encapsulation of the rendering of a NON-Invenio URL.
+
+    Use this for third-party links like
+        - "https://handle.stage.datacite.org/{+pid_doi}"
+        - "https://doi.org/{+pid_doi}"
+    """
 
     def __init__(self, uritemplate, when=None, vars=None):
         """Constructor."""
@@ -123,6 +137,89 @@ class Link:
             self._vars_func(obj, vars)
         vars = preprocess_vars(vars)
         return self._uritemplate.expand(**vars)
+
+
+class Link(ExternalLink):
+    """Return ExternalLink descendant but with deprecation warning."""
+
+    def __init__(self, *args, **kwargs):
+        """Constructor."""
+        warnings.warn(
+            "Link is deprecated and will be removed in v14.0. Use `ExternalLink` for "
+            "third-party links and `EndpointLink` for InvenioRDM links.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
+
+
+class EndpointLink:
+    """Encapsulation of the rendering of an endpoint URL.
+
+    Is interface-compatible with Link for ease of initial adoption.
+    """
+
+    def __init__(self, endpoint, when=None, vars=None, params=None, anchor=None):
+        """Constructor.
+
+        :param endpoint: str. endpoint of the URL
+        :param when: fn(obj, dict) -> bool, when the URL should be rendered
+        :param vars: fn(obj, dict), mutate dict in preparation for expansion
+        :param params: list, parameters (excluding querystrings) used for expansion
+        """
+        self._endpoint = endpoint
+        self._when_func = when
+        self._vars_func = vars
+        self._params = params or []
+        self._anchor_func = anchor or (lambda obj, vars: None)
+
+    def should_render(self, obj, context):
+        """Determine if the link should be rendered."""
+        if self._when_func:
+            return bool(self._when_func(obj, context))
+        return True
+
+    @staticmethod
+    def vars(obj, vars):
+        """Dynamically update vars used to expand the link.
+
+        Subclasses should overwrite this method.
+        """
+        pass
+
+    def expand(self, obj, context):
+        """Expand the endpoint.
+
+        Note: "args" key in generated values for expansion has special meaning.
+              It is used for querystring parameters.
+        """
+        # A `vars`` dict is created here to insulate `context` from
+        # additions/deletions. A deepcopy cannot be used
+        # on context unfortunately as some of the objects stored in the context exhibit
+        # degenerate copying behaviors (i.e., RelationsMapping raising RecursionError)
+        # The "args" subdict (if any) also needs to be insulated.
+        vars = context.copy()
+        if context.get("args"):
+            vars["args"] = context["args"].copy()
+
+        self.vars(obj, vars)
+        if self._vars_func:
+            self._vars_func(obj, vars)
+
+        # Construct final values dict.
+        # Because invenio_url_for renders on the URL all arguments given to it,
+        # filtering for expandable ones must be done.
+        values = {k: v for k, v in vars.items() if k in self._params}
+        # The "args" key in the final values dict is where
+        # querystrings are passed through.
+        # Assumes no clash between URL params and querystrings
+        values.update(vars.get("args", {}))
+        values = dict(sorted(values.items()))  # keep sorted interface
+        return invenio_url_for(
+            self._endpoint,
+            _anchor=self._anchor_func(obj, vars),
+            **values,
+        )
 
 
 class ConditionalLink:

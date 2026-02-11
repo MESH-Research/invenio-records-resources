@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020-2025 CERN.
 # Copyright (C) 2020 Northwestern University.
 # Copyright (C) 2023 Graz University of Technology.
 #
@@ -30,7 +30,10 @@ class RecordPermissionDeniedError(PermissionDenied):
 class PermissionDeniedError(PermissionDenied):
     """Permission denied error."""
 
-    description = "Permission denied."
+    @property
+    def description(self):
+        """Description."""
+        return _("Permission denied.")
 
 
 class RevisionIdMismatchError(Exception):
@@ -44,9 +47,10 @@ class RevisionIdMismatchError(Exception):
     @property
     def description(self):
         """Exception's description."""
-        return (
-            f"Revision id provided({self.expected_revision_id}) doesn't match "
-            f"record's one({self.record_revision_id})"
+        return _(
+            "Revision id provided(%(expected_revision_id)s) doesn't match record's one(%(record_revision_id)s)",
+            expected_revision_id=self.expected_revision_id,
+            record_revision_id=self.record_revision_id,
         )
 
 
@@ -54,6 +58,20 @@ class QuerystringValidationError(ValidationError):
     """Error thrown when there is an issue with the querystring."""
 
     pass
+
+
+class ValidationErrorGroup(Exception):
+    """Error containing multiple validation errors."""
+
+    def __init__(self, errors):
+        """Constructor.
+
+        :param errors: list of dicts in the shape
+                       `{"field": "<fieldA>", "messages": ["<msgA1>", ...]}`
+        """
+        if not isinstance(errors, list):
+            raise TypeError(f"'errors' must be a list, got {type(errors)}: {errors}")
+        self.errors = errors
 
 
 class TransferException(Exception):
@@ -66,7 +84,7 @@ class FacetNotFoundError(Exception):
     def __init__(self, vocabulary_id):
         """Initialise error."""
         self.vocabulary_id = vocabulary_id
-        super().__init__(_("Facet {vocab} not found.").format(vocab=vocabulary_id))
+        super().__init__(_("Facet %(vocab)s not found.", vocab=vocabulary_id))
 
 
 class FileKeyNotFoundError(Exception):
@@ -75,8 +93,10 @@ class FileKeyNotFoundError(Exception):
     def __init__(self, recid, file_key):
         """Constructor."""
         super().__init__(
-            _("Record '{recid}' has no file '{file_key}'.").format(
-                recid=recid, file_key=file_key
+            _(
+                "Record '%(recid)s' has no file '%(file_key)s'.",
+                recid=recid,
+                file_key=file_key,
             )
         )
         self.recid = recid
@@ -89,8 +109,10 @@ class FailedFileUploadException(Exception):
     def __init__(self, recid, file, file_key):
         """Constructor."""
         super().__init__(
-            _("Record '{recid}' failed to upload file '{file_key}'.").format(
-                recid=recid, file_key=file_key
+            _(
+                "Record '%(recid)s' failed to upload file '%(file_key)s'.",
+                recid=recid,
+                file_key=file_key,
             )
         )
         self.recid = recid

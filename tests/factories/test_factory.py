@@ -11,13 +11,13 @@
 """Factory tests."""
 
 import pytest
-from mock_module.schemas import RecordSchema
 from sqlalchemy.exc import InvalidRequestError
 
 from invenio_records_resources.factories.factory import RecordTypeFactory
-from invenio_records_resources.services import RecordServiceConfig, SearchOptions
+from invenio_records_resources.services import SearchOptions
 from invenio_records_resources.services.records.components import ServiceComponent
 from invenio_records_resources.services.records.facets import TermsFacet
+from tests.mock_module.schemas import RecordSchema
 
 
 def test_model_class_create():
@@ -62,33 +62,6 @@ def test_resource_class_create():
     assert rec_type.resource_config_cls.url_prefix == "/resourcetests"
     assert rec_type.resource_config_cls.blueprint_name == "resourcetest"
 
-    # links_schema_class = rec_type.resource_config_cls.links_config["record"]
-    # search_links_schema_class = rec_type.resource_config_cls.links_config[
-    #     "search"
-    # ]
-
-    # assert links_schema_class.__name__ == "ResourceTestLinksSchema"
-    # assert (
-    #     search_links_schema_class.__name__ == "ResourceTestSearchLinksSchema"
-    # )
-
-    # assert hasattr(links_schema_class, "self")
-    # assert hasattr(search_links_schema_class, "self")
-    # assert hasattr(search_links_schema_class, "prev")
-    # assert hasattr(search_links_schema_class, "next")
-
-    # assert (
-    #     links_schema_class.self.template.uri
-    #     == URITemplate("/api/resourcetests/{pid_value}").uri
-    # )
-    # assert (
-    #     search_links_schema_class.self.template.uri
-    #     == URITemplate("/api/resourcetests/{?params*}").uri
-    # )
-
-    # assert rec_type.resource_cls.default_config \
-    # == rec_type.resource_config_cls
-
 
 def test_service_class_create():
     rec_type = RecordTypeFactory("ServiceTest", RecordSchema)
@@ -98,6 +71,8 @@ def test_service_class_create():
     assert rec_type.service_config_cls.permission_policy_cls
     assert rec_type.service_config_cls.record_cls
     assert rec_type.service_config_cls.schema
+    assert rec_type.service_config_cls.links_item
+    assert rec_type.service_config_cls.links_search
 
     assert rec_type.service_cls.__name__ == "ServiceTestService"
     assert rec_type.service_config_cls.__name__ == "ServiceTestServiceConfig"

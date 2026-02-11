@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020-2021 CERN.
+# Copyright (C) 2020-2025 CERN.
 # Copyright (C) 2020-2021 Northwestern University.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
@@ -11,7 +11,7 @@
 
 import json
 
-from mock_module.api import Record
+from tests.mock_module.api import Record
 
 
 def test_simple_flow(app, client, input_data, headers):
@@ -139,3 +139,60 @@ def test_api_errors(app, client, input_data, headers):
     res = client.post("/mocks", headers=h, data=wrong_data)
     assert res.status_code == 400
     assert res.json["message"] == "Unable to decode JSON data in request body."
+
+    # Test marshmallow.ValidationError
+    res = client.post(
+        "/mocks",
+        headers=h,
+        json={
+            "foo": "bar",  # Invalid/unknown field
+            "metadata": {
+                # NOTE: Skipping required "title" field
+            },
+        },
+    )
+    assert res.status_code == 400
+    assert res.json["message"] == "A validation error occurred."
+    errors = res.json["errors"]
+    assert len(errors) == 2
+    assert all(
+        e in errors
+        for e in [
+            {
+                "field": "metadata.title",
+                "messages": ["Missing data for required field."],
+            },
+            {"field": "foo", "messages": ["Unknown field."]},
+        ]
+    )
+
+    # Test ValidationErrorGroup
+    res = client.post(
+        "/mocks",
+        headers=h,
+        json={
+            "metadata": {
+                "trigger_error_group": True,  # This will trigger the error group
+                "title": "Test title",
+            }
+        },
+    )
+    assert res.status_code == 400
+    assert res.json["message"] == "A validation error occurred."
+    errors = res.json["errors"]
+    assert len(errors) == 2
+    assert all(
+        e in errors
+        for e in [
+            {
+                "field": "metadata.trigger_error_group",
+                "messages": ["Error 1 in error group", "Error 2 in error group"],
+            },
+            {
+                "field": "metadata.title",
+                "messages": ["Test warning for title field error group."],
+                "description": "Test description for title field error group.",
+                "severity": "warning",
+            },
+        ]
+    )

@@ -2,6 +2,8 @@
 #
 # Copyright (C) 2020-2024 CERN.
 # Copyright (C) 2020-2021 Northwestern University.
+# Copyright (C) 2025 CESNET.
+# Copyright (C) 2025 Graz University of Technology.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -50,9 +52,10 @@ necessarily persisted in the metadata.
 }
 """
 
+import inspect
 import uuid
 from collections.abc import MutableMapping
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 
 from invenio_db import db
@@ -101,6 +104,12 @@ class FilesManager(MutableMapping):
         self._order = order or []
         self._default_preview = default_preview
         self._entries = entries
+        self._wip_ov_cache = {}
+
+    def _strip_ov_create_args(self, **kwargs):
+        """Strip the values for parameters expected by ``ObjectVersion.create()``."""
+        create_params = inspect.signature(ObjectVersion.create).parameters
+        return {k: v for k, v in kwargs.items() if k not in create_params}
 
     def create_bucket(self):
         """Create a bucket."""
@@ -153,7 +162,16 @@ class FilesManager(MutableMapping):
 
     # TODO: "create" and "update" should be merged somehow...
     @ensure_enabled
-    def create(self, key, obj=None, stream=None, data=None, **kwargs):
+    def create(
+        self,
+        key,
+        *,
+        obj=None,
+        stream=None,
+        data=None,
+        transfer=None,
+        **kwargs,
+    ):
         """Create/initialize a file."""
         assert not (obj and stream)
 
@@ -162,7 +180,9 @@ class FilesManager(MutableMapping):
 
         rf = self.file_cls.create({}, key=key, record_id=self.record.id)
         if stream:
-            obj = ObjectVersion.create(self.bucket, key, stream=stream, **kwargs)
+            obj = ObjectVersion.create(self.bucket, key, **kwargs)
+            self._wip_ov_cache[key] = obj
+            obj.set_contents(stream, **self._strip_ov_create_args(**kwargs))
         if obj:
             if isinstance(obj, dict):
                 fi = FileInstance.create()
@@ -172,6 +192,8 @@ class FilesManager(MutableMapping):
             rf.object_version = obj
         if data:
             rf.update(data)
+        if transfer:
+            rf.transfer = transfer
         rf.commit()
         self._entries[key] = rf
         return rf
@@ -184,7 +206,10 @@ class FilesManager(MutableMapping):
         if rf is None:
             raise InvalidKeyError(description=f"File with {key} does not exist.")
 
-        return ObjectVersion.create(self.bucket, key, stream=stream, **kwargs)
+        obj = ObjectVersion.create(self.bucket, key, **kwargs)
+        self._wip_ov_cache[key] = obj
+        obj.set_contents(stream=stream, **self._strip_ov_create_args(**kwargs))
+        return obj
 
     @ensure_enabled
     def update(self, key, obj=None, stream=None, data=None, **kwargs):
@@ -225,15 +250,20 @@ class FilesManager(MutableMapping):
         :returns: The updated file record.
         """
         rf = self[key]
-        ov = rf.object_version
+        cached_ov = self._wip_ov_cache.pop(key, None)
+        ov = rf.object_version or cached_ov
 
         # Remove or softdelete the entire row
         rf.delete(force=remove_rf)
         if ov and remove_obj:
+            # Set information for later, in case the removed object was still WIP
+            rf.object_version = ov
+
             if softdelete_obj:
-                ObjectVersion.delete(rf.object_version.bucket, rf.object_version.key)
+                ObjectVersion.delete(ov.bucket, ov.key)
             else:
-                rf.object_version.remove()
+                ov.remove()
+
         del self._entries[key]
 
         # Unset the default preview if the file is removed
@@ -269,6 +299,7 @@ class FilesManager(MutableMapping):
         self.default_preview = None
         self._entries = None
         self._order = []
+        self._wip_ov_cache.clear()
 
     def copy(self, src_files, copy_obj=True):
         """Copy from another file manager.
@@ -293,14 +324,19 @@ class FilesManager(MutableMapping):
             for key, rf in src_files.items():
                 new_rf = {
                     "id": uuid.uuid4(),
-                    "created": datetime.utcnow(),
-                    "updated": datetime.utcnow(),
+                    "created": datetime.now(timezone.utc),
+                    "updated": datetime.now(timezone.utc),
                     "key": key,
                     "record_id": record_id,
                     "version_id": 1,
-                    "object_version_id": ovs_by_key[key]["version_id"],
                     "json": dict(rf),
                 }
+                # With some transfers the files are not under the management of
+                # the repository, so can not have an object version (we do not know
+                # if they change, for example remotely stored time series data with
+                # append). So if there is a local object version, copy it.
+                if key in ovs_by_key:
+                    new_rf["object_version_id"] = ovs_by_key[key]["version_id"]
                 rf_to_bulk_insert.append(new_rf)
 
             if rf_to_bulk_insert:
@@ -321,11 +357,9 @@ class FilesManager(MutableMapping):
                 else:
                     dst_obj = rf.object_version
 
-                # Copy file record
-                if rf.metadata is not None:
-                    self[key] = dst_obj, dict(rf)
-                else:
-                    self[key] = dst_obj
+                # Copy file record, including all metadata and transfer info
+                self[key] = dst_obj, dict(rf)
+
         self.default_preview = src_files.default_preview
         self.order = src_files.order
 
@@ -362,10 +396,8 @@ class FilesManager(MutableMapping):
             elif operation == "add":
                 f_key = obj_or_key.key
                 rf = src_files[f_key]
-                if rf.metadata is not None:
-                    self[f_key] = obj_or_key, dict(rf)
-                else:
-                    self[f_key] = obj_or_key
+                # Add file record, including all metadata and transfer info
+                self[f_key] = obj_or_key, dict(rf)
 
         # Check for metadata and access changes
         for key, dest_rf in self.entries.items():
@@ -499,7 +531,7 @@ class FilesManager(MutableMapping):
                 stream = obj_or_stream
             else:
                 raise InvalidOperationError(
-                    description=f"Item has to be ObjectVersion or " "file-like object"
+                    description="Item has to be ObjectVersion or " "file-like object"
                 )
 
         return obj, stream, data

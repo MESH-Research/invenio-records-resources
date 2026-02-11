@@ -1,5 +1,8 @@
 ..
     Copyright (C) 2020-2024 CERN.
+    Copyright (C) 2024-2026 Graz University of Technology.
+    Copyright (C) 2025 Northwestern University.
+    Copyright (C) 2025 KTH Royal Institute of Technology.
 
     Invenio-Records-Resources is free software; you can redistribute it and/or
     modify it under the terms of the MIT License; see LICENSE file for more
@@ -7,6 +10,147 @@
 
 Changes
 =======
+
+Version v9.0.0 (released 2026-01-30)
+
+- chore(setup): bump dependencies
+- fix: DeprecationWarning from invenio-indexer
+- chore: remove warnings
+- fix: RemovedInMarshmallow4Warning
+- fix(chore): DeprecationWarning stdlib
+- fix: removed dependency on PyFilesystem2
+- refactor: remove context usage
+- fix: avoid deepcopy in EndpointLink bc of possible problematic context content
+- fix: black formatting
+- fix: re-add removed import
+- feat: expose FileEndpointLink at services import level
+- feat: add support for anchor in EndpointLink
+- refactor: use EndpointLink in RecordTypeFactory [+]
+
+Version v8.8.0 (released 2026-01-08)
+
+- fix(files-svc): clean up broken FileInstances when an upload fails
+- fix(files-mgr): remember file information before write operations
+- feat(search): allow enforcing a max page size
+
+Version v8.7.1 (released 2025-12-09)
+
+- i18n: pulled translations
+
+Version v8.7.0 (released 2025-11-17)
+
+- feat(records): return page number in RecordList
+
+Version v8.6.2 (released 2025-10-22)
+
+- i18n: pulled translations
+
+Version v8.6.1 (released 2025-09-25)
+
+- fix(multipart): recompute full file checksum if no parts are set
+- fix(service): track errors on commit for create_update_many
+
+Version v8.6.0 (released 2025-07-31)
+
+- services: CompositeSuggestQueryParser: Add term filter clause
+    * Adds support for filtering suggest query results by subtypes extracted
+      from the query string using a colon-separated format (e.g., "subtype1,subtype2:query").
+    * When subtypes are specified, results are restricted to those subtypes using
+      a terms filter clause combined with the multi-match query.
+
+Version v8.5.0 (released 2025-07-17)
+
+- tests: simplify s3 tests and make compatible with uv
+- sphinx: make compatible w/ Python 3.13
+- links: move deprecation warning in object instantiation
+- i18n: pulled translations
+
+Version v8.4.0 (released 2025-07-16)
+
+- requests: add support for multi entity resolution
+    * So far all requests were single entity resolution, this adds support for
+      multi entity resolution in the same request. This is useful for example
+      when you want to assign multiple reviewers in a request.
+
+Version v8.3.0 (released 2025-07-02)
+
+- fix: pkg_resources DeprecationWarning
+- tests: Add unit tests
+- fix: EDTFDateStringCF dump/load to support multiple values
+- fix: raise size limit for multipart file parts
+- ci: remove outdated feature CI
+
+Version v8.2.0 (released 2025-06-23)
+
+- errors: add `ValidationErrorGroup`
+    * Adds a new exception class to allow raising multiple validation errors.
+    * This class is actually a variation of the existing
+      `ValidationErrorWithMessageAsList` exception defined in
+      `invenio-rdm-records`.
+
+- tests: HTTP Range tests
+     * Note: needs PR https://github.com/inveniosoftware/invenio-files-rest/pull/329 to work
+
+Version v8.1.0 (released 2025-06-04)
+
+- permissions: Raise correct exception if file does not exist
+
+Version v8.0.0 (released 2025-06-03)
+
+- feat: Pluggable transfers and multipart transfer implementation
+  * Implementation of RFC 0072
+  * Pluggable transfer types
+  * Implementation of multipart transfer in the same place
+  * Permission generator for per-transfer-type permissions
+
+Version v7.3.0 (released 2025-04-29)
+
+- config: move allow_upload and allow_archive_download to service
+- urls: locate Link warning more appropriately
+
+Version v7.2.0 (released 2025-04-22)
+
+- urls: introduce invenio_url_for-compatible links
+
+Version v7.1.0 (released 2025-04-02)
+
+- files: remove HTTP code from read_content
+  * Should resolve file content issues with S3
+- i18n: fix untranslated strings in facet
+- il8n: replaced gettext with lazy gettext completely
+- i18n: removed deprecated messages
+- setup: dashes no longer work in setup.cfg babel options
+
+Version v7.0.2 (released 2025-03-10)
+
+- services: records: CompositeSuggestQueryParser: Filter out stopwords
+
+Version v7.0.1 (released 2025-02-06)
+
+- fix: file uploads for >100MB
+
+Version 7.0.0 (release 2024-12-09)
+
+- setup: change to reusable workflows
+- setup: bump major dependencies
+
+Version v6.5.0 (released 2024-11-26)
+
+- queryparser: add CompositeSuggestQueryParser
+    * Introduces a new query parser focused on better accuracy for
+      mappings that contain search-as-you-type or ngram-analyzed fields but
+      also secondary information fields that helps to
+      disambiquate/narrow-down results.
+
+Version v6.4.0 (released 2024-11-08)
+
+- transformer: add new RestrictedTerm and RestrictedTermValue to restrict search for
+  individual fields based on permissions
+
+Version v6.3.1 (released 2024-10-01)
+
+- uow: moved Unit of Work pattern and non-record Operations to invenio-db.
+  Added backwards compatible imports.
 
 Version v6.3.0 (released 2024-08-08)
 

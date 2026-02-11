@@ -2,6 +2,7 @@
 #
 # Copyright (C) 2020-2021 CERN.
 # Copyright (C) 2021 Northwestern University.
+# Copyright (C) 2025 CESNET.
 #
 # Invenio-Records-Resources is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -15,10 +16,10 @@ fixtures are available.
 
 import pytest
 from invenio_cache import current_cache
-from mock_module.api import Record, RecordWithFiles
-from mock_module.config import ServiceWithFilesConfig
 
 from invenio_records_resources.services import RecordService
+from tests.mock_module.api import RecordWithFiles
+from tests.mock_module.config import ServiceWithFilesConfig
 
 
 @pytest.fixture(scope="module")
@@ -44,7 +45,7 @@ def example_record(app, db, service, input_data, identity_simple, location):
 
 
 @pytest.fixture()
-def example_file_record(db, input_data):
+def example_file_record(db, input_data, location):
     """Example record."""
     record = RecordWithFiles.create({}, **input_data)
     record.commit()
